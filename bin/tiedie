@@ -81,6 +81,7 @@ from ppr import PPrDiffuser
 from permute import NetBalancedPermuter
 from tiedie_util import *
 from master_reg import *
+import pickle
 
 ##
 ## Basic input validation
@@ -309,12 +310,17 @@ else:
 	if opts.kernel is not None:
 		sys.stderr.write("Loading Heat Diffusion Kernel..\n")
 		# load a heat diffusion kernel to perform diffusion
-		diffuser = Kernel(opts.kernel)
+		if "pickle" in opts.kernel:
+			diffuser = pickle.load(open(opts.kernel, "rb"))
+		else:
+			diffuser = Kernel(opts.kernel)
 	else:
 		sys.stderr.write("Using SCIPY to compute the matrix exponential, t=0.1...\n")
 		# No kernel supplied: use SCIPY to generate a kernel on the fly, and then use it
 		# for subsequent diffusion operations
 		diffuser = SciPYKernel(opts.network)
+		sys.stderr.write("Writing Kernel to " + output_folder+"/kernel.pickle" + "\n")
+		pickle.dump(diffuser, open(output_folder+"/kernel.pickle", 'wb') )
 
 # Check to make sure the node universe matches the
 k_labels = diffuser.getLabels()
@@ -374,7 +380,7 @@ writeNetwork(subnet_soln, output_folder+"/tiedie.sif")
 #
 # Find logically consistent paths
 #
-TP, FP, validated = findConsistentPaths(up_signs, down_signs, subnet_soln, output_folder, True)
+TP, FP, validated = findConsistentPaths(up_signs, down_signs, subnet_soln, output_folder, False)
 
 # Open the report file to log a summary of the results
 report_file = output_folder+"/report.txt"
